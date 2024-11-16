@@ -2,7 +2,7 @@ from torch.utils.data import Dataset, DataLoader
 
 
 
-class TextDataSet(Dataset):
+class TextDataset(Dataset):
     def __init__(self, texts, labels):
         self.texts = texts
         self.labels = labels
