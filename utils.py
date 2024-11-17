@@ -1,12 +1,16 @@
 import os
+from torchtext.vocab import build_vocab_from_iterator
+from dataset import IMDBDataset
+from torch.utils.data import DataLoader
 
-def read_data_from_directory(directory):
-    texts, labels = [], []
-    for label_dir in ["pos", "neg"]:
-        label = 1 if label_dir == "pos" else 0
-        folder = os.path.join(directory, label_dir)
-        for filename in os.listdir(folder):
-            with open(os.path.join(folder, filename), encoding="utf-8") as f:
-                texts.append(f.read())
-                labels.append(label)
-    return texts, labels
+
+def create_dataloaders(train_dir, batch_size=32):
+    train_dataset = IMDBDataset(train_dir)
+    
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True
+    )
+    
+    return train_dataloader, train_dataset.vocab
