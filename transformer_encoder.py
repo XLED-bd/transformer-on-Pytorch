@@ -4,7 +4,7 @@ from torch.optim import optimizer
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, embed_dim, dense_dim, num_heads, **kwargs):
+    def __init__(self, embed_dim, dense_dim, num_heads):
         super(TransformerEncoder, self).__init__()
         self.attension = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads, batch_first=True)
         self.dense_proj = nn.Sequential(
