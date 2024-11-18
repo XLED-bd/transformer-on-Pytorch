@@ -5,17 +5,13 @@ import torch
 class Transformer(nn.Module):
     def __init__(self, embed_dim, dense_dim, num_heads, vocab_size, **kwargs):
         super(Transformer, self).__init__()
-
         self.embedding = nn.Embedding(vocab_size, embed_dim)
 
-
         self.encoder = TransformerEncoder(embed_dim, dense_dim, num_heads)
-        # self.decoder = 
 
         self.global_max_pool = nn.AdaptiveMaxPool1d(1)
         self.out = nn.Linear(600, 1)
         self.sigmoid = nn.Sigmoid()
-
 
     def forward(self, text, mask=None):
         embedded = self.embedding(text)
