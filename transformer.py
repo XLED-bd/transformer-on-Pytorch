@@ -1,11 +1,15 @@
 import torch.nn as nn
 from transformer_encoder import TransformerEncoder
+from positional_embedding import PositionalEmbedding
 import torch
 
 class Transformer(nn.Module):
     def __init__(self, embed_dim, dense_dim, num_heads, vocab_size, **kwargs):
         super(Transformer, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_dim)
+
+        # self.embedding = nn.Embedding(vocab_size, embed_dim)
+
+        self.embedding = PositionalEmbedding(vocab_size, embed_dim)
 
         self.encoder = TransformerEncoder(embed_dim, dense_dim, num_heads)
 
