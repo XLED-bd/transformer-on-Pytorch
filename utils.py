@@ -4,7 +4,7 @@ from dataset import IMDBDataset
 from torch.utils.data import DataLoader
 
 
-def create_dataloaders(train_dir, batch_size=32):
+def create_imdb_dataloader(train_dir, batch_size=32):
     train_dataset = IMDBDataset(train_dir)
     
     train_dataloader = DataLoader(
