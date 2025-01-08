@@ -119,3 +119,91 @@ class AGDataset(Dataset):
         text = self.texts[idx]
         label = self.labels[idx]
         return self._process_text(text), torch.tensor(label, dtype=torch.long)
+    
+
+
+class EngSpaDataset(Dataset):
+    def __init__(self, root_dir, vocab_eng=None, vocab_spa=None, max_length=200):
+        self.max_length = max_length
+        self.tokenizer_eng = get_tokenizer('spacy', language='en')
+        self.tokenizer_spa = get_tokenizer('spacy', language='es')
+
+        
+        self.texts = []
+        self.labels = []
+
+        with open(root_dir, 'r') as f:
+            texts = f.readlines()
+
+        for i in range(0, len(texts)):
+            self.texts.append(texts[i].split('\t')[0])
+            self.labels.append(texts[i].split('\t')[1].replace('\n', ''))
+            
+
+        if vocab_eng is None:
+            self.vocab_eng = self._create_vocab_eng()
+            self.vocab_spa = self._create_vocab_spa()
+        else:
+            self.vocab_eng = vocab_eng
+            self.vocab_spa = vocab_spa
+
+
+    def _create_vocab_eng(self, max_tokens=30000):
+        def yield_tokens() -> Iterable[List[str]]:
+            for text in self.texts:
+                yield self.tokenizer_eng(text)
+        
+        vocab_eng = build_vocab_from_iterator(
+            yield_tokens(),
+            specials=['<pad>', '<unk>', '<start>', '<end>'],
+            max_tokens=max_tokens - 4 
+        )
+        vocab_eng.set_default_index(vocab_eng['<unk>'])
+        return vocab_eng
+
+    def _create_vocab_spa(self, max_tokens=30000):
+        def yield_tokens() -> Iterable[List[str]]:
+            for text in self.texts:
+                yield self.tokenizer_spa(text)
+        
+        vocab_spa = build_vocab_from_iterator(
+            yield_tokens(),
+            specials=['<pad>', '<unk>', '<start>', '<end>'],
+            max_tokens=max_tokens - 4 
+        )
+        vocab_spa.set_default_index(vocab_spa['<unk>'])
+        return vocab_spa
+        
+    def _process_text_eng(self, text: str) -> torch.Tensor:
+        tokens = self.tokenizer_eng(text)
+        ids = [self.vocab_eng[token] for token in tokens]
+        if len(ids) < self.max_length - 2:
+            ids = [self.vocab_eng['<start>']] + ids + [self.vocab_eng['<pad>']] * (self.max_length - len(ids) - 2) + [self.vocab_eng['<end>']]
+        else:
+            ids = [self.vocab_eng['<start>']] + ids[:self.max_length - 2] + [self.vocab_eng['<end>']]
+        return torch.tensor(ids, dtype=torch.long)
+    
+    def _process_text_spa(self, text: str) -> torch.Tensor:
+        tokens = self.tokenizer_spa(text)
+        ids = [self.vocab_spa[token] for token in tokens]
+        if len(ids) < self.max_length:
+            ids = [self.vocab_eng['<start>']] + ids + [self.vocab_spa['<pad>']] * (self.max_length - len(ids)) + [self.vocab_eng['<end>']]
+        else:
+            ids = [self.vocab_eng['<start>']] + ids[:self.max_length] + [self.vocab_eng['<end>']]
+        return torch.tensor(ids, dtype=torch.long)
+    
+    def __len__(self):
+        return len(self.texts)
+
+    def __getitem__(self, idx):
+        text = self.texts[idx]
+        label = self.labels[idx]
+        return self._process_text_eng(text), self._process_text_spa(label)
+    
+
+dataset = EngSpaDataset("spa-eng/spa.txt")
+
+print(dataset.texts[1])
+print(dataset.labels[1])
+
+print(dataset[1])
