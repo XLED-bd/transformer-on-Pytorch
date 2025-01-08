@@ -129,14 +129,17 @@ class EngSpaDataset(Dataset):
         self.tokenizer_spa = get_tokenizer('spacy', language='es')
 
         
-        self.texts = []
+        self.texts_eng = []
+        self.texts_spa = []
+
         self.labels = []
 
         with open(root_dir, 'r') as f:
             texts = f.readlines()
 
         for i in range(0, len(texts)):
-            self.texts.append(texts[i].split('\t')[0])
+            self.texts_eng.append(texts[i].split('\t')[0])
+            self.texts_spa.append(texts[i].split('\t')[1].replace('\n', ''))
             self.labels.append(texts[i].split('\t')[1].replace('\n', ''))
             
 
@@ -150,7 +153,7 @@ class EngSpaDataset(Dataset):
 
     def _create_vocab_eng(self, max_tokens=30000):
         def yield_tokens() -> Iterable[List[str]]:
-            for text in self.texts:
+            for text in self.texts_eng:
                 yield self.tokenizer_eng(text)
         
         vocab_eng = build_vocab_from_iterator(
@@ -163,7 +166,7 @@ class EngSpaDataset(Dataset):
 
     def _create_vocab_spa(self, max_tokens=30000):
         def yield_tokens() -> Iterable[List[str]]:
-            for text in self.texts:
+            for text in self.texts_spa:
                 yield self.tokenizer_spa(text)
         
         vocab_spa = build_vocab_from_iterator(
@@ -177,10 +180,10 @@ class EngSpaDataset(Dataset):
     def _process_text_eng(self, text: str) -> torch.Tensor:
         tokens = self.tokenizer_eng(text)
         ids = [self.vocab_eng[token] for token in tokens]
-        if len(ids) < self.max_length - 2:
+        if len(ids) < self.max_length:
             ids = ids + [self.vocab_eng['<pad>']] * (self.max_length - len(ids) - 2)
         else:
-            ids = + ids[:self.max_length - 2]
+            ids = + ids[:self.max_length]
         return torch.tensor(ids, dtype=torch.long)
     
     def _process_text_spa(self, text: str) -> torch.Tensor:
@@ -193,17 +196,19 @@ class EngSpaDataset(Dataset):
         return torch.tensor(ids, dtype=torch.long)
     
     def __len__(self):
-        return len(self.texts)
+        return len(self.texts_eng)
 
     def __getitem__(self, idx):
-        text = self.texts[idx]
+        text_eng = self.texts_eng[idx]
+        text_spa = self.texts_spa[idx]
+
         label = self.labels[idx]
-        return self._process_text_eng(text), self._process_text_spa(label)
+        return self._process_text_eng(text_eng), self._process_text_spa(text_spa), self._process_text_spa(label)
     
 
 dataset = EngSpaDataset("spa-eng/spa.txt")
 
-print(dataset.texts[1])
+print(dataset.texts_eng[1])
 print(dataset.labels[1])
 
 print(dataset[1])
