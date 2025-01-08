@@ -178,9 +178,9 @@ class EngSpaDataset(Dataset):
         tokens = self.tokenizer_eng(text)
         ids = [self.vocab_eng[token] for token in tokens]
         if len(ids) < self.max_length - 2:
-            ids = [self.vocab_eng['<start>']] + ids + [self.vocab_eng['<pad>']] * (self.max_length - len(ids) - 2) + [self.vocab_eng['<end>']]
+            ids = ids + [self.vocab_eng['<pad>']] * (self.max_length - len(ids) - 2)
         else:
-            ids = [self.vocab_eng['<start>']] + ids[:self.max_length - 2] + [self.vocab_eng['<end>']]
+            ids = + ids[:self.max_length - 2]
         return torch.tensor(ids, dtype=torch.long)
     
     def _process_text_spa(self, text: str) -> torch.Tensor:
