@@ -37,4 +37,4 @@ def create_eng_spa_dataloader(train_dir, batch_size=32):
         shuffle=True
     )
     
-    return train_dataloader, train_dataset.vocab
+    return train_dataloader, train_dataset.vocab_eng, train_dataset.vocab_spa
