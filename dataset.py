@@ -123,90 +123,92 @@ class AGDataset(Dataset):
     
 
 
-class EngSpaDataset(Dataset):
-    def __init__(self, root_dir, vocab_eng=None, vocab_spa=None, max_length=40):
+class TranslateDataset(Dataset):
+    def __init__(self, root_dir, tokenizer_1, tokenizer_2,vocab_1=None, vocab_2=None, max_length=40, max_tokens=15000):
         self.max_length = max_length
-        self.tokenizer_eng = get_tokenizer('spacy', language='en')
-        self.tokenizer_spa = get_tokenizer('spacy', language='es')
+
+        self.tokenizer_1 = tokenizer_1
+        self.tokenizer_2 = tokenizer_2
+        
 
         
-        self.texts_eng = []
-        self.texts_spa = []
+        self.texts_1 = []
+        self.texts_2 = []
 
         with open(root_dir, 'r') as f:
             texts = f.readlines()
 
-        for i in range(0, len(texts)):
-            self.texts_eng.append(''.join(char for char in texts[i].replace('\n', '').lower().split('\t')[0] if char not in string.punctuation + "¿"))
-            self.texts_spa.append(''.join(char for char in texts[i].replace('\n', '').lower().split('\t')[1] if char not in string.punctuation + "¿"))
+        for i in range(len(texts)):
+            self.texts_1.append(''.join(char for char in texts[i].replace('\n', '').lower().split('\t')[0] if char not in string.punctuation + "¿"))
+            self.texts_2.append(''.join(char for char in texts[i].replace('\n', '').lower().split('\t')[1] if char not in string.punctuation + "¿"))
             
 
-        if vocab_eng is None:
-            self.vocab_eng = self._create_vocab_eng()
-            self.vocab_spa = self._create_vocab_spa()
+        if vocab_1 is None:
+            self.vocab_1 = self._create_vocab_1(max_tokens=max_tokens)
+            self.vocab_2 = self._create_vocab_2(max_tokens=max_tokens)
         else:
-            self.vocab_eng = vocab_eng
-            self.vocab_spa = vocab_spa
+            self.vocab_1 = vocab_1
+            self.vocab_2 = vocab_2
 
 
-    def _create_vocab_eng(self, max_tokens=15000):
+    def _create_vocab_1(self, max_tokens):
         def yield_tokens() -> Iterable[List[str]]:
-            for text in self.texts_eng:
-                yield self.tokenizer_eng(text)
+            for text in self.texts_1:
+                yield self.tokenizer_1(text)
         
-        vocab_eng = build_vocab_from_iterator(
+        vocab_1 = build_vocab_from_iterator(
             yield_tokens(),
             specials=['<pad>', '<unk>', '<start>', '<end>'],
             max_tokens=max_tokens - 4 
         )
-        vocab_eng.set_default_index(vocab_eng['<unk>'])
-        return vocab_eng
+        vocab_1.set_default_index(vocab_1['<unk>'])
+        return vocab_1
 
-    def _create_vocab_spa(self, max_tokens=15000):
+    def _create_vocab_2(self, max_tokens=15000):
         def yield_tokens() -> Iterable[List[str]]:
-            for text in self.texts_spa:
-                yield self.tokenizer_spa(text)
+            for text in self.texts_2:
+                yield self.tokenizer_2(text)
         
-        vocab_spa = build_vocab_from_iterator(
+        vocab_2 = build_vocab_from_iterator(
             yield_tokens(),
             specials=['<pad>', '<unk>', '<start>', '<end>'],
             max_tokens=max_tokens - 4 
         )
-        vocab_spa.set_default_index(vocab_spa['<unk>'])
-        return vocab_spa
+        vocab_2.set_default_index(vocab_2['<unk>'])
+        return vocab_2
         
-    def _process_text_eng(self, text: str) -> torch.Tensor:
-        tokens = self.tokenizer_eng(text)
-        ids = [self.vocab_eng[token] for token in tokens]
+    def _process_text_1(self, text: str) -> torch.Tensor:
+        tokens = self.tokenizer_1(text)
+        ids = [self.vocab_1[token] for token in tokens]
         if len(ids) < self.max_length:
-            ids = ids + [self.vocab_eng['<pad>']] * (self.max_length - len(ids))
+            ids = ids + [self.vocab_1['<pad>']] * (self.max_length - len(ids))
         else:
             ids = ids[:self.max_length]
         return torch.tensor(ids, dtype=torch.long)
     
-    def _process_text_spa(self, text: str) -> torch.Tensor:
-        tokens = self.tokenizer_spa(text)
-        ids = [self.vocab_spa[token] for token in tokens]
+    def _process_text_2(self, text: str) -> torch.Tensor:
+        tokens = self.tokenizer_2(text)
+        ids = [self.vocab_2[token] for token in tokens]
         if len(ids) < self.max_length:
-            ids = [self.vocab_eng['<start>']] + ids + [self.vocab_eng['<end>']] + [self.vocab_spa['<pad>']] * (self.max_length - len(ids) - 2)
+            ids = [self.vocab_2['<start>']] + ids + [self.vocab_2['<end>']] + [self.vocab_2['<pad>']] * (self.max_length - len(ids) - 2)
         else:
-            ids = [self.vocab_eng['<start>']] + ids[:self.max_length - 2] + [self.vocab_eng['<end>']]
+            ids = [self.vocab_2['<start>']] + ids[:self.max_length - 2] + [self.vocab_2['<end>']]
         return torch.tensor(ids, dtype=torch.long)
     
-    def _process_text_spa_target(self, text: str) -> torch.Tensor:
-        tokens = self.tokenizer_spa(text)
-        ids = [self.vocab_spa[token] for token in tokens]
+    def _process_text_2_target(self, text: str) -> torch.Tensor:
+        tokens = self.tokenizer_2(text)
+        ids = [self.vocab_2[token] for token in tokens]
         if len(ids) < self.max_length:
-            ids = ids + [self.vocab_eng['<end>']] + [self.vocab_spa['<pad>']] * (self.max_length - len(ids) - 1)
+            ids = ids + [self.vocab_2['<end>']] + [self.vocab_2['<pad>']] * (self.max_length - len(ids) - 1)
         else:
-            ids = ids[:self.max_length - 1] + [self.vocab_eng['<end>']]
+            ids = ids[:self.max_length - 1] + [self.vocab_2['<end>']]
         return torch.tensor(ids, dtype=torch.long)
     
     def __len__(self):
-        return len(self.texts_eng)
+        return len(self.texts_1)
 
     def __getitem__(self, idx):
-        text_eng = self.texts_eng[idx]
-        text_spa = self.texts_spa[idx]
+        text_1 = self.texts_1[idx]
+        text_2 = self.texts_2[idx]
 
-        return self._process_text_eng(text_eng), self._process_text_spa(text_spa), self._process_text_spa_target(text_spa)
+        return self._process_text_1(text_1), self._process_text_2(text_2), self._process_text_2_target(text_2)
